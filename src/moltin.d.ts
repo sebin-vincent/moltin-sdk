@@ -13,7 +13,7 @@ import { CurrencyEndpoint } from './types/currency'
 import { BrandEndpoint } from './types/brand'
 import { CategoryEndpoint } from './types/category'
 import { CollectionEndpoint } from './types/collection'
-import { IntegrationEndpoint } from './types/integration'
+import { IntegrationEndpoint } from './types/integrations'
 import { OrdersEndpoint } from './types/order'
 import { GatewaysEndpoint } from './types/gateway'
 import { CustomersEndpoint } from './types/customer'
@@ -50,7 +50,10 @@ import { UserAuthenticationPasswordProfileEndpoint } from './types/user-authenti
 import { MetricsEndpoint } from './types/metrics'
 import { PersonalDataEndpoint } from './types/personal-data'
 import { DataEntriesEndpoint } from './types/data-entries'
+import { ErasureRequestsEndpoint } from './types/erasure-requests'
 import { PriceBookPriceModifierEndpoint } from './types/price-book-price-modifiers'
+import { AccountMembershipSettingsEndpoint } from './types/account-membership-settings'
+import { ApplicationKeysEndpoint } from './types/application-keys'
 
 export * from './types/config'
 export * from './types/storage'
@@ -60,6 +63,7 @@ export * from './types/core'
 export * from './types/customer'
 export * from './types/order'
 export * from './types/cart'
+export * from './types/address'
 export * from './types/customer-address'
 export * from './types/account-address'
 export * from './types/inventory'
@@ -70,7 +74,7 @@ export * from './types/category'
 export * from './types/brand'
 export * from './types/currency'
 export * from './types/pcm'
-export * from './types/integration'
+export * from './types/integrations'
 export * from './types/hierarchies'
 export * from './types/job'
 export * from './types/file'
@@ -101,12 +105,19 @@ export * from './types/accounts'
 export * from './types/account-authentication-settings'
 export * from './types/account-members'
 export * from './types/account-memberships'
+export * from './types/account-membership-settings'
 export * from './types/pcm-variations'
 export * from './types/pcm-variations-relationships'
 export * from './types/metrics'
 export * from './types/personal-data'
 export * from './types/data-entries'
+export * from './types/erasure-requests'
 export * from './types/price-book-price-modifiers'
+export * from './types/user-authentication-info'
+export * from './types/user-authentication-password-profile'
+export * from './types/locales'
+export * from './types/extensions'
+export * from './types/application-keys'
 
 // UMD
 export as namespace moltin
@@ -116,7 +127,7 @@ export class Moltin {
   cartId?: string
   request: RequestFactory
   storage: StorageFactory
-  credentials: AuthenticateResponseBody
+  credentials: () => AuthenticateResponseBody | null
   Products: ProductsEndpoint
   PCM: PcmProductsEndpoint
   Catalogs: CatalogsEndpoint
@@ -150,6 +161,7 @@ export class Moltin {
   Accounts: AccountEndpoint
   AccountMembers: AccountMembersEndpoint
   AccountAuthenticationSettings: AccountAuthenticationSettingsEndpoint
+  AccountMembershipSettings: AccountMembershipSettingsEndpoint
   AccountMemberships: AccountMembershipsEndpoint
   UserAuthenticationInfo: UserAuthenticationInfoEndpoint
   PasswordProfile: PasswordProfileEndpoint
@@ -159,7 +171,9 @@ export class Moltin {
   Metrics: MetricsEndpoint
   PersonalData: PersonalDataEndpoint
   DataEntries: DataEntriesEndpoint
+  ErasureRequests: ErasureRequestsEndpoint
   PriceBookPriceModifier: PriceBookPriceModifierEndpoint
+  ApplicationKeys: ApplicationKeysEndpoint
 
   Cart(id?: string): CartEndpoint // This optional cart id is super worrying when using the SDK in a node server :/
   constructor(config: Config)

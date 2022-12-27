@@ -9,11 +9,32 @@ import {
   ResourcePage,
   QueryableResource,
   Resource,
-  RelationshipToMany
+  RelationshipToMany,
+  Subset
 } from './core'
-import { AddressBase } from './address'
 import { FormattedPrice, Price } from './price'
 import { ProductComponents } from './pcm'
+import { XOR } from './util'
+
+export interface OrderAddressBase {
+  first_name: string
+  last_name: string
+  company_name?: string
+  line_1: string
+  line_2?: string
+  city?: string
+  postcode: string
+  county?: string
+  country: string
+  region: string
+}
+
+export interface OrderShippingAddress extends OrderAddressBase {
+  phone_number?: string
+  instructions?: string
+}
+
+export interface OrderBillingAddress extends OrderAddressBase {}
 
 /**
  * Core Object Base Interface
@@ -34,8 +55,8 @@ export interface OrderBase {
     name: string
     email: string
   }
-  shipping_address: AddressBase
-  billing_address: AddressBase
+  shipping_address: OrderShippingAddress
+  billing_address: OrderBillingAddress
 }
 
 export interface Order extends Identifiable, OrderBase {
@@ -47,6 +68,7 @@ export interface Order extends Identifiable, OrderBase {
       with_tax: FormattedPrice
       without_tax: FormattedPrice
       tax: FormattedPrice
+      discount: FormattedPrice
     }
     timestamps: {
       created_at: string
@@ -54,7 +76,7 @@ export interface Order extends Identifiable, OrderBase {
     }
   }
   relationships?: {
-    items?: RelationshipToMany<'product'>
+    items?: RelationshipToMany<'item'>
     customer?: Relationship<'customer'>
     account?: Relationship<'account'>
     account_member?: Relationship<'account_member'>
@@ -147,6 +169,11 @@ export interface OrderItem extends Identifiable, OrderItemBase {
         unit: FormattedPrice
         value: FormattedPrice
       }
+      without_discount?: {
+        unit: FormattedPrice
+        value: FormattedPrice
+      }
+      discounts?: FormattedPrice
     }
     timestamps?: {
       created_at: string
@@ -164,23 +191,165 @@ export interface OrderItem extends Identifiable, OrderItemBase {
         currency: string
         includes_tax: string
       }
+      id: string
       code: string
     }
-  ],
+  ]
   components?: ProductComponents
   catalog_source?: 'pim'
 }
 
-export interface ConfirmPaymentBody {
-  method: string
-  gateway: string
+export type PurchasePaymentMethod = 'purchase'
+export type AuthorizePaymentMethod = 'authorize'
+export type CapturePaymentMethod = 'capture'
+export type RefundPaymentMethod = 'refund'
+
+export type PaymentMethod =
+  | PurchasePaymentMethod
+  | AuthorizePaymentMethod
+  | CapturePaymentMethod
+  | RefundPaymentMethod
+
+interface PaymentBase {
   payment: string
-  options?: {
-    customer: string
-    idempotency_key: string
-    receipt_email: string
+}
+
+export interface AdyenPayment extends PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod | CapturePaymentMethod
+  gateway: 'adyen'
+  options: {
+    shopper_reference: string
+    recurring_processing_model?: string
   }
 }
+
+export interface AuthorizeNetPayment extends PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod | CapturePaymentMethod
+  gateway: 'authorize_net'
+  options: {
+    customer_payment_profile_id: string
+  }
+}
+
+/** Braintree Payment **/
+
+type BraintreePaymentOptions = XOR<
+  { payment_method_nonce: true },
+  { payment_method_token: true }
+> & {
+  custom_fields?: Record<string, string>
+}
+
+export interface BraintreePayment extends PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'braintree'
+  options?: BraintreePaymentOptions
+}
+
+export interface CardConnectPayment extends PaymentBase {
+  method:
+    | PurchasePaymentMethod
+    | AuthorizePaymentMethod
+    | CapturePaymentMethod
+    | RefundPaymentMethod
+  gateway: 'card_connect'
+}
+
+export interface CyberSourcePayment extends PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'cyber_source'
+  options?: Record<string, string>
+}
+
+export interface PayPalExpressCheckoutPayment extends PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'paypal_express_checkout'
+  options?: {
+    description?: string
+    soft_descriptor?: string
+    application_context?: {
+      return_url?: string
+      cancel_url?: string
+      shipping_preference?: string
+      landing_page?: 'LOGIN' | 'BILLING' | 'NO_PREFERENCE'
+      locale?: string
+      brand_name?: string
+    }
+  }
+}
+
+/**
+ * Stripe Payments
+ */
+
+export type StripePaymentOptionBase = {
+  idempotency_key?: string
+  receipt_email?: string
+  customer?: string
+}
+
+export interface StripePaymentBase {
+  amount?: number
+  options?: StripePaymentOptionBase
+}
+
+export interface StripePayment extends StripePaymentBase, PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod | CapturePaymentMethod
+  gateway: 'stripe'
+  options?: StripePaymentOptionBase & {
+    destination?: string
+  }
+}
+
+export interface StripeConnectPayment extends StripePaymentBase, PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'stripe_connect'
+}
+
+export interface StripeIntentsPayment extends StripePaymentBase, PaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'stripe_payment_intents'
+}
+
+export interface ElasticPathStripePayment extends StripePaymentBase {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'elastic_path_payments_stripe'
+  payment_method_types?: string[]
+  payment?: string
+}
+
+/**
+ * Manual Payments
+ */
+
+export interface ManualPayment {
+  method: PurchasePaymentMethod | AuthorizePaymentMethod
+  gateway: 'manual'
+  amount?: number
+  paymentmethod_meta?: {
+    name?: string
+    custom_reference?: string
+  }
+}
+
+export type PaymentRequestBody =
+  | ManualPayment
+  | ElasticPathStripePayment
+  | StripeIntentsPayment
+  | StripeConnectPayment
+  | StripePayment
+  | PayPalExpressCheckoutPayment
+  | CyberSourcePayment
+  | CardConnectPayment
+  | BraintreePayment
+  | AuthorizeNetPayment
+  | AdyenPayment
+
+export interface ConfirmPaymentBodyWithOptions {
+  options: Record<string, any>
+}
+
+export type ConfirmPaymentBody = ConfirmPaymentBodyWithOptions | {}
 
 export interface ConfirmPaymentResponse {
   data: {
@@ -236,11 +405,26 @@ export interface AnonymizeOrderResponse {
   ]
 }
 
-type OrderSortAscend = 'created_at' | 'payment' | 'shipping' | 'status' | 'with_tax'
-type OrderSortDescend = '-created_at' | '-payment' | '-shipping' | '-status' | '-with_tax'
-type OrderSort = OrderSortAscend | OrderSortDescend
+export type OrderSortAscend =
+  | 'created_at'
+  | 'payment'
+  | 'shipping'
+  | 'status'
+  | 'with_tax'
+export type OrderSortDescend =
+  | '-created_at'
+  | '-payment'
+  | '-shipping'
+  | '-status'
+  | '-with_tax'
+export type OrderSort = OrderSortAscend | OrderSortDescend
 
-type OrderInclude = 'product' | 'customer' | 'items' | 'account' | 'account_member'
+export type OrderInclude =
+  | 'product'
+  | 'customer'
+  | 'items'
+  | 'account'
+  | 'account_member'
 
 /**
  * Orders Endpoints
@@ -279,7 +463,7 @@ export interface OrdersEndpoint
    * @param id - The UUID of the order that you want to authorize payment for.
    * @param body - The body of the order
    */
-  Payment(id: string, body: ConfirmPaymentBody): Promise<ConfirmPaymentResponse>
+  Payment(id: string, body: PaymentRequestBody): Promise<ConfirmPaymentResponse>
 
   /**
    * Update an Order
@@ -289,17 +473,12 @@ export interface OrdersEndpoint
    * @param body
    * @constructor
    */
-  Update(id: string, body: Partial<OrderBase>): Promise<Resource<Order>>
+  Update(id: string, body: Subset<OrderBase>): Promise<Resource<Order>>
 
-/**
+  /**
    * anonymize an Order
    * Description: Anonymize order with the list of the ids.
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api
-   * @param id
-   * @param body
-   * @constructor
    */
-
   anonymize(ids: AnonymizeOrder): Promise<AnonymizeOrderResponse>
-
 }

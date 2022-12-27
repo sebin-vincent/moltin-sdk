@@ -5,7 +5,7 @@
  */
 import { Resource } from './core'
 
-interface Settings {
+export interface Settings {
   type: 'settings'
   /**
    * Page length
@@ -33,13 +33,18 @@ interface Settings {
   calculation_method: string
   /**
    * Address Mandatory Fields
-   * Description: 
+   * Description:
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/advanced/settings/index.html#address-mandatory-fields
    */
   address_mandatory_fields: string[]
 }
 
-interface CartSettings {
+export interface TtlSettings {
+  type: 'time_to_live'
+  days: number
+}
+
+export interface CartSettings {
   type: 'settings'
   cart_expiry_days: number
 }
@@ -66,6 +71,10 @@ export interface SettingsEndpoint {
    * @param body the settings object
    */
   Update(body: Partial<Settings>): Promise<Resource<Settings>>
+
+  GetLogsTtl(): Promise<Resource<TtlSettings>>
+
+  UpdateLogsTtl(days: number): Promise<Resource<TtlSettings>>
 
   /**
    * Get Cart Settings

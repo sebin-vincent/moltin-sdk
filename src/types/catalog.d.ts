@@ -4,7 +4,7 @@ import type { Catalog, CatalogFilter } from './catalogs'
 import type { Node } from './nodes'
 import type { Hierarchy } from './hierarchies'
 import type { File } from './file'
-import { Identifiable } from './core';
+import { Identifiable } from './core'
 
 export interface ShopperCatalogResource<T> extends Resource<T> {
   included?: {
@@ -46,6 +46,17 @@ export interface ShopperCatalogReleaseBase extends Identifiable {
         related: string
       }
     }
+    delta: {
+      links: {
+        related: string
+      }
+    }
+  }
+  meta: {
+    created_at: string
+    is_full_publish: boolean
+    release_status: 'PENDING' | 'IN_PROGRESS' | 'FAILED' | 'PUBLISHED'
+    started_at: string
   }
   links: {
     self: string
@@ -85,15 +96,18 @@ interface ShopperCatalogResourcePageIncluded {
   component_products?: ProductResponse[]
 }
 
-export type ShopperCatalogResourcePage<T> = ResourcePage<T, ShopperCatalogResourcePageIncluded>
+export type ShopperCatalogResourcePage<T> = ResourcePage<
+  T,
+  ShopperCatalogResourcePageIncluded
+>
 
 export interface ShopperCatalogProductsEndpoint
   extends ShopperCatalogProductsQueryableResource<
-      ShopperCatalogProductsEndpoint,
-      Catalog,
-      CatalogFilter,
-      ShopperCatalogProductsInclude
-    > {
+    ShopperCatalogProductsEndpoint,
+    Catalog,
+    CatalogFilter,
+    ShopperCatalogProductsInclude
+  > {
   endpoint: 'products'
 
   All(options?: {
@@ -118,14 +132,20 @@ export interface ShopperCatalogProductsEndpoint
     token?: string
     additionalHeaders?: ShopperCatalogAdditionalHeaders
   }): Promise<ShopperCatalogResourcePage<ProductResponse>>
+
+  GetProductChildren(options: {
+    productId: string
+    token?: string
+    additionalHeaders?: ShopperCatalogAdditionalHeaders
+  }): Promise<ShopperCatalogResourcePage<ProductResponse>>
 }
 
 export interface NodesShopperCatalogEndpoint
   extends ShopperCatalogQueryableResource<
-      NodesShopperCatalogEndpoint,
-      Catalog,
-      CatalogFilter
-    > {
+    NodesShopperCatalogEndpoint,
+    Catalog,
+    CatalogFilter
+  > {
   endpoint: 'nodes'
 
   All(options?: {
@@ -154,10 +174,10 @@ export interface NodesShopperCatalogEndpoint
 
 export interface HierarchiesShopperCatalogEndpoint
   extends ShopperCatalogQueryableResource<
-      HierarchiesShopperCatalogEndpoint,
-      Catalog,
-      CatalogFilter
-    > {
+    HierarchiesShopperCatalogEndpoint,
+    Catalog,
+    CatalogFilter
+  > {
   endpoint: 'products'
 
   All(options?: {
@@ -181,15 +201,15 @@ export interface HierarchiesShopperCatalogEndpoint
     hierarchyId: string
     token?: string
     additionalHeaders?: ShopperCatalogAdditionalHeaders
-  }): Promise<ShopperCatalogResourcePage<Hierarchy>>
+  }): Promise<ShopperCatalogResourcePage<Node>>
 }
 
 export interface ShopperCatalogEndpoint
   extends ShopperCatalogQueryableResource<
-      ShopperCatalogEndpoint,
-      Catalog,
-      CatalogFilter
-    > {
+    ShopperCatalogEndpoint,
+    Catalog,
+    CatalogFilter
+  > {
   endpoint: 'catalog'
   Nodes: NodesShopperCatalogEndpoint
   Products: ShopperCatalogProductsEndpoint

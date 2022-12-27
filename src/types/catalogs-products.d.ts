@@ -2,7 +2,9 @@ import type { Identifiable, Resource, ResourceList, ResourcePage } from './core'
 import type { ProductFilter } from './product'
 import type { PcmProduct, ProductComponents } from './pcm'
 import type { MatrixObject, Option, Variation } from './variations'
-import { FormattedPrice } from './price'
+import type {Extensions} from "./extensions";
+import type { FormattedPrice } from './price'
+
 
 export interface CatalogsProductVariation extends Omit<Variation, 'relationships' | 'options'> {
   options: Omit<Option, 'modifiers'>[]
@@ -34,18 +36,18 @@ export interface ProductResponse extends Identifiable {
     store_id: string
     translations: string[]
     updated_at: string
-    weight: string
+    weight: string,
+    extensions?: Extensions
   };
   meta: {
     catalog_id?: string
     catalog_source?: 'pcm'
     pricebook_id?: string
     display_price?: {
-      without_tax: {
-        amount: number
-        currency: string
-        formatted: string
-      }
+      without_tax: FormattedPrice
+    }
+    original_display_price?: {
+      without_tax: FormattedPrice
     }
     variation_matrix?: MatrixObject
     variations?: CatalogsProductVariation[]
@@ -155,4 +157,17 @@ export interface CatalogsProductsEndpoint {
     releaseId: string
     token?: string
   }): Promise<ResourcePage<PcmProduct>>
+
+  GetCatalogProductChildren(options: {
+    catalogId: string
+    releaseId: string
+    productId: string
+    token?: string
+  }): Promise<ResourcePage<PcmProduct>>
+
+  GetProductsInCatalogRelease(options: {
+    catalogId: string
+    releaseId: string
+    token?: string
+  }): Promise<ResourcePage<ProductResponse>>
 }

@@ -6,14 +6,16 @@ import {
   Identifiable,
   CrudQueryableResource,
   ResourcePage,
+  ResourceList
 } from './core'
-import { PcmFileRelationshipEndpoint } from "./pcm-file-relationship";
+import { PcmFileRelationshipEndpoint } from './pcm-file-relationship'
 import { PcmTemplateRelationshipEndpoint } from './pcm-template-relationship'
 import { PcmVariationsRelationshipsEndpoint } from './pcm-variations-relationships'
 import { PcmMainImageRelationshipEndpoint } from './pcm-main-image-relationship'
-import { PcmJobsEndpoint } from './pcm-jobs';
+import { PcmJobsEndpoint } from './pcm-jobs'
 import { File } from './file'
-import Locales from "./locales";
+import { Locales } from './locales'
+import { Node } from './nodes'
 
 /**
  * Core PCM Product Base Interface
@@ -30,8 +32,9 @@ export interface PcmProductBase extends PcmProductRelationships {
     commodity_type?: string
     upc_ean?: string | null
     mpn?: string | null
+    external_ref?: string | null
     extensions?: Object
-    locales?:{[key in Locales]?: {name?: string, description?: string}}
+    locales?: { [key in Locales]?: { name?: string; description?: string } }
     components?: ProductComponents
   }
 }
@@ -39,6 +42,8 @@ export interface PcmProductBase extends PcmProductRelationships {
 export interface ProductComponents {
   [key: string]: {
     name: string
+    min?: number
+    max?: number
     options: ProductComponentOption[]
   }
 }
@@ -56,7 +61,7 @@ export interface ProductComponentOption {
 
 export interface PcmProduct extends Identifiable, PcmProductBase {
   meta: {
-    variation_matrix: {[key: string]: string} | {}
+    variation_matrix: { [key: string]: string } | {}
   }
 }
 
@@ -64,7 +69,7 @@ export interface PcmProductRelationships {
   relationships?: {
     base_product?: {
       data: {
-        id: string,
+        id: string
         type: string
       }
     }
@@ -81,9 +86,9 @@ export interface PcmProductFilter {
 }
 
 type PcmProductSort = // TODO
-  | 'name'
+  'name'
 
-export type PcmProductInclude = | 'main_image' | 'component_products'
+export type PcmProductInclude = 'main_image' | 'component_products'
 
 interface PcmProductsIncluded {
   main_images: File[]
@@ -91,22 +96,35 @@ interface PcmProductsIncluded {
 }
 
 export interface PcmProductResponse {
-  data: PcmProduct,
+  data: PcmProduct
   included: PcmProductsIncluded
 }
 
 export type PcmProductsResponse = ResourcePage<PcmProduct, PcmProductsIncluded>
 export type PcmProductUpdateBody = Partial<PcmProductBase> & Identifiable
+
+/**
+ * PCM Product nodes attachment body
+ */
+export interface PcmProductAttachmentBody {
+  filter: string
+  node_ids: string[]
+}
 /**
  * PCM Product Endpoints
  */
 export interface PcmProductsEndpoint
-    extends Omit<CrudQueryableResource<PcmProduct,
-    PcmProductBase,
-    PcmProductUpdateBody,
-    PcmProductFilter,
-    PcmProductSort,
-    PcmProductInclude>, 'Get' | 'Limit' | 'Offset' | 'With'> {
+  extends Omit<
+    CrudQueryableResource<
+      PcmProduct,
+      PcmProductBase,
+      PcmProductUpdateBody,
+      PcmProductFilter,
+      PcmProductSort,
+      PcmProductInclude
+    >,
+    'Get' | 'Limit' | 'Offset' | 'With'
+  > {
   endpoint: 'products'
 
   FileRelationships: PcmFileRelationshipEndpoint
@@ -136,9 +154,15 @@ export interface PcmProductsEndpoint
    * @constructor
    */
 
-  GetChildProducts(
-    productId: string,
-  ): Promise<ResourcePage<PcmProduct>>
+  GetChildProducts(productId: string): Promise<ResourcePage<PcmProduct>>
+
+  /**
+   * Get Product Nodes
+   * https://documentation.elasticpath.com/commerce-cloud/docs/api/pcm/products/relationships/get-a-products-nodes.html
+   * @param productId - The ID of the product to get the nodes for.
+   * @constructor
+   */
+  GetProductNodes(productId: string): Promise<ResourceList<Node>>
 
   /**
    * Import Products
@@ -146,5 +170,18 @@ export interface PcmProductsEndpoint
    * @constructor
    */
   ImportProducts(file: FormData): Promise<{}>
-}
 
+  /**
+   * Attach Nodes
+   * @param body - filter and node id's
+   * @constructor
+   */
+  AttachNodes(body: PcmProductAttachmentBody): Promise<{}>
+
+  /**
+   * Detach Nodes
+   * @param body - filter and node id's
+   * @constructor
+   */
+  DetachNodes(body: PcmProductAttachmentBody): Promise<{}>
+}

@@ -39,8 +39,27 @@ class PCMEndpoint extends CRUDExtend {
     )
   }
 
+  GetProductNodes(productId) {
+    const { limit, offset } = this
+    return this.request.send(
+      buildURL(`${this.endpoint}/${productId}/nodes`, {
+        limit,
+        offset
+      }),
+      'GET'
+    )
+  }
+
   ImportProducts(file) {
     return this.request.send(`${this.endpoint}/import`, 'POST', file)
+  }
+  
+  AttachNodes(body) {
+    return this.request.send(`${this.endpoint}/attach_nodes`, 'POST', body)
+  }
+
+  DetachNodes(body) {
+    return this.request.send(`${this.endpoint}/detach_nodes`, 'POST', body)
   }
 }
 

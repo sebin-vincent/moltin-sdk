@@ -147,11 +147,45 @@ class Products extends CRUDExtend {
       token
     )
   }
+
+  GetCatalogProductChildren({
+    catalogId,
+    releaseId,
+    productId,
+    token = null
+  }) {
+    return this.request.send(
+        `catalogs/${catalogId}/releases/${releaseId}/${
+            this.endpoint
+        }/${productId}/relationships/children`,
+        'GET',
+        undefined,
+        token
+    )
+  }
+
+  GetProductsInCatalogRelease({ catalogId, releaseId, token = null }) {
+    const { limit, offset, includes, sort, filter } = this
+
+    return this.request.send(
+      buildURL(`catalogs/${catalogId}/releases/${releaseId}/products`, {
+        includes,
+        sort,
+        limit,
+        offset,
+        filter
+      }),
+      'GET',
+      undefined,
+      token
+    )
+  }
 }
 
-class Releases {
+class Releases extends CRUDExtend {
   constructor(endpoint) {
-    this.config = { ...endpoint } // Need to clone config so it is only updated in PCM
+    const config = { ...endpoint } // Need to clone config so it is only updated in PCM
+    super(config)
     this.request = new RequestFactory(this.config)
     this.config.version = 'pcm'
     this.endpoint = 'releases'
@@ -176,8 +210,14 @@ class Releases {
   }
 
   GetAllHierarchies({ catalogId, releaseId, token = null }) {
+    const { limit, offset } = this
+
     return this.request.send(
-      `catalogs/${catalogId}/${this.endpoint}/${releaseId}/hierarchies`,
+        buildURL(
+      `catalogs/${catalogId}/${this.endpoint}/${releaseId}/hierarchies`, {
+              limit,
+              offset
+      }),
       'GET',
       undefined,
       token
@@ -280,6 +320,33 @@ class CatalogsEndpoint extends CRUDExtend {
     )
 
     return this.call
+  }
+
+  GetCatalogReleases(catalogId, token = null) {
+    return this.request.send(
+        `${this.endpoint}/${catalogId}/releases`,
+        'GET',
+        undefined,
+        token,
+    )
+  }
+
+  DeleteCatalogRelease(catalogId, releaseId, token = null) {
+    return this.request.send(
+        `${this.endpoint}/${catalogId}/releases/${releaseId}`,
+        'DELETE',
+        undefined,
+        token
+    )
+  }
+
+  DeleteAllCatalogReleases(catalogId, token = null) {
+    return this.request.send(
+        `${this.endpoint}/${catalogId}/releases`,
+        'DELETE',
+        undefined,
+        token
+    )
   }
 }
 

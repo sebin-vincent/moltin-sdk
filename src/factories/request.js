@@ -4,7 +4,7 @@ import {
   resetProps,
   tokenInvalid,
   getCredentials,
-  isNode
+  isNode, resolveCredentialsStorageKey
 } from '../utils/helpers'
 
 const createAuthRequest = config => {
@@ -113,17 +113,30 @@ class RequestFactory {
       : createAuthRequest(config)
 
     promise
-      .then(({ access_token, refresh_token, expires }) => {
-        if (access_token || refresh_token) {
-          const credentials = {
-            client_id: config.client_id,
-            access_token,
-            expires,
-            ...(refresh_token && { refresh_token })
+      .then(
+        ({
+          access_token,
+          refresh_token,
+          expires,
+          expires_in,
+          identifier,
+          token_type
+        }) => {
+          if (access_token || refresh_token) {
+            const credentials = {
+              client_id: config.client_id,
+              access_token,
+              expires,
+              expires_in,
+              identifier,
+              token_type,
+              ...(refresh_token && { refresh_token })
+            }
+
+            storage.set(resolveCredentialsStorageKey(config.name), JSON.stringify(credentials))
           }
-          storage.set('moltinCredentials', JSON.stringify(credentials))
         }
-      })
+      )
       .catch(() => {})
 
     return promise
@@ -141,82 +154,76 @@ class RequestFactory {
   ) {
     const { config, storage } = this
 
-    const promise = new Promise((resolve, reject) => {
-      const credentials = getCredentials(storage)
+    const storageKey = resolveCredentialsStorageKey(config.name);
+    const credentials = getCredentials(storage, storageKey)
 
-      const req = cred => {
-        const access_token = cred ? cred.access_token : null
+    const req = cred => {
+      const access_token = cred ? cred.access_token : null
 
-        const isFormData =
-          (additionalHeaders &&
-            additionalHeaders['Content-Type'] &&
-            additionalHeaders['Content-Type'].includes('multipart')) ||
-          (!isNode() && body instanceof FormData)
+      const isFormData =
+        (additionalHeaders &&
+          additionalHeaders['Content-Type'] &&
+          additionalHeaders['Content-Type'].includes('multipart')) ||
+        (!isNode() && body instanceof FormData)
 
-        const headers = {
-          'X-MOLTIN-SDK-LANGUAGE': config.sdk.language,
-          'X-MOLTIN-SDK-VERSION': config.sdk.version
-        }
-
-        if (!isFormData) {
-          headers['Content-Type'] = 'application/json'
-        }
-
-        if (access_token) {
-          headers.Authorization = `Bearer ${access_token}`
-        }
-
-        if (config.store_id) {
-          headers['X-MOLTIN-AUTH-STORE'] = config.store_id
-        }
-
-        headers['X-MOLTIN-APPLICATION'] = config.application
-          ? config.application
-          : 'epcc sdk'
-
-        if (config.currency) {
-          headers['X-MOLTIN-CURRENCY'] = config.currency
-        }
-
-        if (config.language) {
-          headers['X-MOLTIN-LANGUAGE'] = config.language
-        }
-
-        if (token) {
-          headers['X-MOLTIN-CUSTOMER-TOKEN'] = token
-        }
-
-        if (config.headers) {
-          Object.assign(headers, config.headers)
-        }
-
-        if (additionalHeaders) {
-          Object.assign(headers, additionalHeaders)
-        }
-
-        const requestBody = () => {
-          // form-data body should be sent raw
-          if (isFormData) return body
-
-          return wrapBody ? buildRequestBody(body) : JSON.stringify(body)
-        }
-
-        fetchRetry(config, uri, method, version, headers, requestBody)
-          .then(result => resolve(result))
-          .catch(error => reject(error))
+      const headers = {
+        'X-MOLTIN-SDK-LANGUAGE': config.sdk.language,
+        'X-MOLTIN-SDK-VERSION': config.sdk.version
       }
 
-      if (tokenInvalid(config) && config.reauth && !config.store_id) {
-        return this.authenticate()
-          .then(() => req(getCredentials(storage)))
-          .catch(error => reject(error))
+      if (!isFormData) {
+        headers['Content-Type'] = 'application/json'
       }
-      return req(credentials)
-    })
+
+      if (access_token) {
+        headers.Authorization = `Bearer ${access_token}`
+      }
+
+      if (config.store_id) {
+        headers['X-MOLTIN-AUTH-STORE'] = config.store_id
+      }
+
+      headers['X-MOLTIN-APPLICATION'] = config.application
+        ? config.application
+        : 'epcc sdk'
+
+      if (config.currency) {
+        headers['X-MOLTIN-CURRENCY'] = config.currency
+      }
+
+      if (config.language) {
+        headers['X-MOLTIN-LANGUAGE'] = config.language
+      }
+
+      if (token) {
+        headers['X-MOLTIN-CUSTOMER-TOKEN'] = token
+      }
+
+      if (config.headers) {
+        Object.assign(headers, config.headers)
+      }
+
+      if (additionalHeaders) {
+        Object.assign(headers, additionalHeaders)
+      }
+
+      const requestBody = () => {
+        // form-data body should be sent raw
+        if (isFormData) return body
+
+        return wrapBody ? buildRequestBody(body) : JSON.stringify(body)
+      }
+
+      return fetchRetry(config, uri, method, version, headers, requestBody)
+    }
+
+    if (tokenInvalid(config) && config.reauth && !config.store_id) {
+      return this.authenticate().then(() => req(getCredentials(storage, storageKey)))
+    }
 
     if (instance) resetProps(instance)
 
-    return promise
+    return req(credentials)
   }
 }
 

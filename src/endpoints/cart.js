@@ -16,7 +16,14 @@ class CartEndpoint extends BaseExtend {
   }
 
   Get() {
-    return this.request.send(`${this.endpoint}/${this.cartId}`, 'GET')
+    const { includes } = this
+
+    return this.request.send(
+      buildURL(`${this.endpoint}/${this.cartId}`, {
+        includes,
+      }),
+      'GET'
+    )
   }
 
   Items() {
@@ -36,6 +43,10 @@ class CartEndpoint extends BaseExtend {
     return this.call
   }
 
+  /**
+   * TODO Parameters should be reordered in the next major release
+   */
+  // eslint-disable-next-line default-param-last
   AddProduct(productId, quantity = 1, data = {}, isSku) {
     const body = buildCartItemData(productId, quantity, 'cart_item', {}, isSku)
 
@@ -68,10 +79,11 @@ class CartEndpoint extends BaseExtend {
     )
   }
 
-  BulkAdd(body) {
+  BulkAdd(body, options) {
+ 
     return this.request.send(`${this.endpoint}/${this.cartId}/items`, 'POST', {
       data: body,
-      options: { add_all_or_nothing: false }
+      ...(options && { options })
     })
   }
 

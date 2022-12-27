@@ -106,6 +106,32 @@ interface StorageFactory {
 }
 ```
 
+### Multiple Gateways
+
+You can support multiple gateways with a `name` property when initializing the gateway.
+
+`name` should be unique to avoid sharing storage keys with the other gateways of the same name.
+
+```js
+import { gateway as EPCCGateway } from "@moltin/sdk"
+
+const gatewayOne = EPCCGateway({
+    name: "my-first-gateway",
+    client_id: 'XXX'
+})
+
+const gatewayTwo = EPCCGateway({
+    name: "my-second-gateway",
+    client_id: 'XXX'
+})
+```
+
+Storage keys used for storage solutions are prefixed with the name provided and end with the relevent feature e.g.
+`my-first-gateway_ep_cart`, `my-first-gateway_ep_credentials` and `my-first-gateway_ep_currency`.
+
+If no name property is provided to the EPCCGateway function, the legacy naming is maintained:
+`mcart`, `moltinCredentials` and `mcurrency`
+
 ### Included Headers
 
 There are currently several optional headers you can pass into the configuration, which include `application`, `language` and `currency`.
@@ -274,6 +300,6 @@ You can learn more about the Rollup API and configuration [here](https://github.
 
 ## Terms And Conditions
 
-- Any changes to this project must be reviewed and approved by the repository owner. For more information about contributing, see the [Contribution Guide](https://github.com/moltin/gatsby-demo-store/blob/master/.github/CONTRIBUTING.md).
+- Any changes to this project must be reviewed and approved by the repository owner.
 - For more information about the license, see [MIT License](https://github.com/moltin/js-sdk/blob/main/LICENSE).
 

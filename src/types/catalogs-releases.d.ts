@@ -1,4 +1,6 @@
-import { Identifiable, Resource, ResourceList } from './core'
+import { Identifiable, Resource, ResourceList, ResourcePage } from './core'
+import { Hierarchy } from './hierarchies'
+import { ShopperCatalogReleaseBase } from "./catalog";
 
 export interface ReleaseBase extends Identifiable {
   name: string
@@ -22,16 +24,26 @@ export interface CatalogsReleasesEndpoint {
   All(options: {
     catalogId: string
     token?: string
-  }): Promise<ResourceList<ReleaseResponse>>
+  }): Promise<ResourceList<ShopperCatalogReleaseBase>>
 
   Get(options: {
     catalogId: string
     releaseId: string
     token?: string
-  }): Promise<Resource<ReleaseResponse>>
+  }): Promise<Resource<ShopperCatalogReleaseBase>>
+
+  GetAllHierarchies(options: {
+    catalogId: string
+    releaseId: string
+    token?: string
+  }): Promise<ResourcePage<Hierarchy>>
 
   Create(options: {
     catalogId: string
     token?: string
   }): Promise<Resource<ReleaseBase>>
+
+  Limit(value: number): CatalogsReleasesEndpoint
+
+  Offset(value: number): CatalogsReleasesEndpoint
 }

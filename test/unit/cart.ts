@@ -728,7 +728,8 @@ describe('Moltin cart', () => {
           type: 'promotion_item',
           code: 'testcode'
         }
-      ])
+      ],
+      { add_all_or_nothing: false })
       .then(response => {
         assert.propertyVal(response, 'name', 'Custom Item')
         assert.propertyVal(response, 'quantity', 1)
@@ -1007,7 +1008,8 @@ describe('Moltin cart', () => {
       code: 'CALI',
       rate: 0.0775,
       jurisdiction: 'CALIFORNIA',
-      name: 'California Tax'
+      name: 'California Tax',
+      type: 'tax-item'
     }
 
     // Intercept the API request
@@ -1034,7 +1036,8 @@ describe('Moltin cart', () => {
       code: 'CALI',
       rate: 0.0775,
       jurisdiction: 'CALIFORNIA',
-      name: 'California Tax'
+      name: 'California Tax',
+      type: 'tax-item'
     }
 
     // Intercept the API request
