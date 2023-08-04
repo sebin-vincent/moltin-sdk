@@ -6,13 +6,13 @@ import {
   Identifiable,
   CrudQueryableResource,
   ResourcePage,
-  ResourceList
+  ResourceList, Resource
 } from './core'
 import { PcmFileRelationshipEndpoint } from './pcm-file-relationship'
 import { PcmTemplateRelationshipEndpoint } from './pcm-template-relationship'
 import { PcmVariationsRelationshipsEndpoint } from './pcm-variations-relationships'
 import { PcmMainImageRelationshipEndpoint } from './pcm-main-image-relationship'
-import { PcmJobsEndpoint } from './pcm-jobs'
+import { PcmJobBase, PcmJobsEndpoint} from './pcm-jobs'
 import { File } from './file'
 import { Locales } from './locales'
 import { Node } from './nodes'
@@ -39,11 +39,20 @@ export interface PcmProductBase extends PcmProductRelationships {
   }
 }
 
+export interface PcmJob extends Identifiable, PcmJobBase {
+  type: 'pim-job'
+  meta: {
+    file_locations: string[]
+    filter: string
+  }
+}
+
 export interface ProductComponents {
   [key: string]: {
     name: string
     min?: number
     max?: number
+    sort_order?: number | null
     options: ProductComponentOption[]
   }
 }
@@ -52,6 +61,7 @@ export interface ProductComponentOption {
   id: string
   quantity: number
   type: string
+  sort_order?: number | null
   meta: {
     name: string
     sku: string
@@ -62,6 +72,7 @@ export interface ProductComponentOption {
 export interface PcmProduct extends Identifiable, PcmProductBase {
   meta: {
     variation_matrix: { [key: string]: string } | {}
+    owner?: 'organization' | 'store'
   }
 }
 
@@ -109,6 +120,15 @@ export type PcmProductUpdateBody = Partial<PcmProductBase> & Identifiable
 export interface PcmProductAttachmentBody {
   filter: string
   node_ids: string[]
+}
+/**
+ * PCM Product nodes attachment response
+ */
+export interface PcmProductAttachmentResponse {
+  meta: {
+    nodes_attached: number
+    nodes_not_found: string[]
+  }
 }
 /**
  * PCM Product Endpoints
@@ -169,19 +189,26 @@ export interface PcmProductsEndpoint
    * @param file - The file you want to upload. The file type is `.csv`.
    * @constructor
    */
-  ImportProducts(file: FormData): Promise<{}>
+  ImportProducts(file: FormData): Promise<Resource<PcmJob>>
 
   /**
    * Attach Nodes
    * @param body - filter and node id's
    * @constructor
    */
-  AttachNodes(body: PcmProductAttachmentBody): Promise<{}>
+  AttachNodes(body: PcmProductAttachmentBody): Promise<PcmProductAttachmentResponse>
 
   /**
    * Detach Nodes
    * @param body - filter and node id's
    * @constructor
    */
-  DetachNodes(body: PcmProductAttachmentBody): Promise<{}>
+  DetachNodes(body: PcmProductAttachmentBody): Promise<PcmProductAttachmentResponse>
+
+  /**
+   * Export products
+   * @param filter - products filters
+   * @constructor
+   */
+  ExportProducts(filter?: PcmProductFilter): Promise<Resource<PcmJob>>
 }

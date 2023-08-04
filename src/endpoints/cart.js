@@ -20,7 +20,7 @@ class CartEndpoint extends BaseExtend {
 
     return this.request.send(
       buildURL(`${this.endpoint}/${this.cartId}`, {
-        includes,
+        includes
       }),
       'GET'
     )
@@ -43,17 +43,49 @@ class CartEndpoint extends BaseExtend {
     return this.call
   }
 
-  /**
-   * TODO Parameters should be reordered in the next major release
-   */
-  // eslint-disable-next-line default-param-last
-  AddProduct(productId, quantity = 1, data = {}, isSku) {
+  AllShippingGroupsCart() {
+    return this.request.send(`${this.endpoint}/${this.cartId}/shipping-groups`, 'GET')
+  }
+
+  GetCartShippingGroup(shippingGroupId) {
+    return this.request.send(`${this.endpoint}/${this.cartId}/shipping-groups/${shippingGroupId}`, 'GET')
+  }
+
+  CreateShippingGroup(body){
+    const shippingObject = Object.assign(body, {
+      type: 'shipping-type'
+    })
+
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/shipping-groups`,
+      'POST',
+      shippingObject
+    )
+  }
+
+  AddProduct(
+    productId,
+    quantity = 1,
+    data = {},
+    isSku = false,
+    token = null,
+    additionalHeaders = {}
+  ) {
     const body = buildCartItemData(productId, quantity, 'cart_item', {}, isSku)
 
-    return this.request.send(`${this.endpoint}/${this.cartId}/items`, 'POST', {
-      ...body,
-      ...data
-    })
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/items`,
+      'POST',
+      {
+        ...body,
+        ...data
+      },
+      token,
+      null,
+      true,
+      null,
+      additionalHeaders
+    )
   }
 
   AddCustomItem(body) {
@@ -68,6 +100,71 @@ class CartEndpoint extends BaseExtend {
     )
   }
 
+  AddCartCustomDiscount(body) {
+    const bodyObject = Object.assign(body, {
+      type: 'custom_discount'
+    })
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/custom-discounts`,
+      'POST',
+      bodyObject
+    )
+  }
+
+  UpdateCartCustomDiscount(customDiscountId, body) {
+    const bodyObject = Object.assign(body, {
+      type: 'custom_discount'
+    })
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/custom-discounts/${customDiscountId}`,
+      'PUT',
+      bodyObject
+    )
+  }
+
+  RemoveCartCustomDiscount(customDiscountId) {
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/custom-discounts/${customDiscountId}`,
+      'DELETE'
+    )
+  }
+
+  AddItemCustomDiscount(itemId, body) {
+    const bodyObject = Object.assign(body, {
+      type: 'custom_discount'
+    })
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/items/${itemId}//custom-discounts`,
+      'POST',
+      bodyObject
+    )
+  }
+
+  UpdateItemCustomDiscount(itemId, customDiscountId, body) {
+    const bodyObject = Object.assign(body, {
+      type: 'custom_discount'
+    })
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/items/${itemId}/custom-discounts/${customDiscountId}`,
+      'PUT',
+      bodyObject
+    )
+  }
+
+  RemoveItemCustomDiscount(itemId, customDiscountId) {
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/items/${itemId}/custom-discounts/${customDiscountId}`,
+      'DELETE'
+    )
+  }
+
+  BulkAddCartCustomDiscount(body, options) {
+    return this.request.send(`${this.endpoint}/${this.cartId}/custom-discounts`, 'POST', {
+      data: body,
+      ...(options && { options })
+    })
+  }
+
   AddPromotion(code, token = null) {
     const body = buildCartItemData(code, null, 'promotion_item')
 
@@ -80,7 +177,6 @@ class CartEndpoint extends BaseExtend {
   }
 
   BulkAdd(body, options) {
- 
     return this.request.send(`${this.endpoint}/${this.cartId}/items`, 'POST', {
       data: body,
       ...(options && { options })
@@ -130,13 +226,18 @@ class CartEndpoint extends BaseExtend {
     return this.request.send(`${this.endpoint}/${this.cartId}/items`, 'DELETE')
   }
 
-  UpdateItem(itemId, quantity, data = {}) {
+  UpdateItem(itemId, quantity, data = {}, additionalHeaders = {}) {
     const body = buildCartItemData(itemId, quantity)
 
     return this.request.send(
       `${this.endpoint}/${this.cartId}/items/${itemId}`,
       'PUT',
-      { ...body, ...data }
+      { ...body, ...data },
+      null,
+      null,
+      true,
+      null,
+      additionalHeaders
     )
   }
 
@@ -174,6 +275,13 @@ class CartEndpoint extends BaseExtend {
     )
   }
 
+  BulkAddItemTax(body, options) {
+    return this.request.send(`${this.endpoint}/${this.cartId}/taxes`, 'POST', {
+      data: body,
+      ...(options && { options })
+    })
+  }
+
   UpdateItemTax(itemId, taxItemId, taxData) {
     const body = Object.assign(taxData, {
       type: 'tax_item'
@@ -193,7 +301,12 @@ class CartEndpoint extends BaseExtend {
     )
   }
 
-  Checkout(customer, billing_address, shipping_address = billing_address) {
+  Checkout(
+    customer,
+    billing_address,
+    shipping_address = billing_address,
+    additionalHeaders = {}
+  ) {
     const body = buildCartCheckoutData(
       customer,
       billing_address,
@@ -203,7 +316,29 @@ class CartEndpoint extends BaseExtend {
     return this.request.send(
       `${this.endpoint}/${this.cartId}/checkout`,
       'POST',
-      body
+      body,
+      null,
+      null,
+      true,
+      null,
+      additionalHeaders
+    )
+  }
+
+  Merge(cartId, token, options = {}) {
+    const body = {
+      type: 'cart_items',
+      cart_id: `${cartId}`
+    }
+
+    return this.request.send(
+      `${this.endpoint}/${this.cartId}/items`,
+      'POST',
+      {
+        data: body,
+        ...(options && { options })
+      },
+      token
     )
   }
 

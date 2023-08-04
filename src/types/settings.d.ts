@@ -37,6 +37,8 @@ export interface Settings {
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/advanced/settings/index.html#address-mandatory-fields
    */
   address_mandatory_fields: string[]
+
+  include_organization_resources: boolean
 }
 
 export interface TtlSettings {
@@ -47,6 +49,9 @@ export interface TtlSettings {
 export interface CartSettings {
   type: 'settings'
   cart_expiry_days: number
+  discounts?: {
+    custom_discounts_enabled?: boolean
+  }
 }
 
 /**
@@ -71,6 +76,8 @@ export interface SettingsEndpoint {
    * @param body the settings object
    */
   Update(body: Partial<Settings>): Promise<Resource<Settings>>
+
+  Delete(): Promise<{}>
 
   GetLogsTtl(): Promise<Resource<TtlSettings>>
 

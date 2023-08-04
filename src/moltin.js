@@ -47,6 +47,9 @@ import DataEntriesEndpoint from './endpoints/data-entry'
 import AccountMembershipSettingsEndpoint from './endpoints/account-membership-settings'
 import ErasureRequestsEndpoint from './endpoints/erasure-requests'
 import ApplicationKeysEndpoint from './endpoints/application-keys'
+import SubscriptionProductsEndpoint from './endpoints/subscription-products'
+import SubscriptionPlansEndpoint from './endpoints/subscription-plan'
+import SubscriptionOfferingsEndpoint from './endpoints/subscription-offerings'
 
 import {cartIdentifier, tokenInvalid, getCredentials, resolveCredentialsStorageKey} from './utils/helpers'
 import CatalogsEndpoint from './endpoints/catalogs'
@@ -112,6 +115,9 @@ export default class Moltin {
       new UserAuthenticationPasswordProfileEndpoint(config)
     this.Metrics = new MetricsEndpoint(config)
     this.ApplicationKeys = new ApplicationKeysEndpoint(config)
+    this.SubscriptionProducts = new SubscriptionProductsEndpoint(config)
+    this.SubscriptionPlans = new SubscriptionPlansEndpoint(config)
+    this.SubscriptionOfferings = new SubscriptionOfferingsEndpoint(config)
   }
 
   // Expose `Cart` class on Moltin class

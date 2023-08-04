@@ -2,7 +2,7 @@ import { assert } from 'chai'
 import nock from 'nock'
 import { gateway as MoltinGateway } from '../../src/moltin'
 
-const apiUrl = 'https://api.moltin.com/v2'
+const apiUrl = 'https://euwest.api.elasticpath.com/v2'
 
 describe('Moltin settings', () => {
   const Moltin = MoltinGateway({
@@ -33,7 +33,8 @@ describe('Moltin settings', () => {
             'postcode',
             'country',
             'instructions'
-          ]
+          ],
+          include_organization_resources: false
         }
       })
 
@@ -54,7 +55,8 @@ describe('Moltin settings', () => {
             'postcode',
             'country',
             'instructions'
-          ]
+          ],
+          include_organization_resources: false
         }
       })
     })
@@ -89,7 +91,8 @@ describe('Moltin settings', () => {
             'postcode',
             'country',
             'instructions'
-          ]
+          ],
+          include_organization_resources: false
         }
       })
 
@@ -110,9 +113,24 @@ describe('Moltin settings', () => {
             'postcode',
             'country',
             'instructions'
-          ]
+          ],
+          include_organization_resources: false
         }
       })
+    })
+  })
+
+  it('should delete store settings', () => {
+    nock(apiUrl, {
+      reqheaders: {
+        Authorization: 'Bearer a550d8cbd4a4627013452359ab69694cd446615a'
+      }
+    })
+        .delete('/settings')
+        .reply(204, {})
+
+    return Moltin.Settings.Delete().then(response => {
+      assert.deepEqual(response, {})
     })
   })
 })

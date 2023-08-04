@@ -3,10 +3,8 @@
  * Description: Products are the core resource to any Commerce Cloud project. They can be associated by category, collection, brands, and more.
  */
 
-import {
-  Identifiable,
-  Resource, ResourceList, ResourcePage
-} from './core'
+import { Identifiable, Resource, ResourceList, ResourcePage } from './core'
+import { Locales } from './locales'
 
 /**
  * Core PCM Product Base Interface
@@ -18,14 +16,19 @@ export interface NodeBase {
     name: string
     description?: string
     slug?: string
+    curated_products?: string[]
+    locales?: { [key in Locales]?: { name?: string; description?: string } }
   }
   relationships?: {
     parent: {
       data: {
-        type: string;
+        type: string
         id: string
       }
     }
+  },
+  meta?: {
+    sort_order: number
   }
 }
 
@@ -45,22 +48,27 @@ export interface Node extends Identifiable, NodeBase {
     }
     parent: {
       data: {
-        type: string;
+        type: string
         id: string
       }
     }
   }
 }
 
+export type UpdateNodeBody = Omit<NodeBase, 'relationships' | 'attributes'> &
+  Identifiable & {
+    attributes: Partial<NodeBase['attributes']>
+  }
+
 export interface NodeFilter {
   // TODO
 }
 
 type NodeSort = // TODO
-  | ''
+  ''
 
 type NodeInclude = // TODO
-  | ''
+  ''
 
 /**
  * PCM Product Endpoints
@@ -89,7 +97,7 @@ export interface NodesEndpoint {
   Update(options: {
     hierarchyId: string
     nodeId: string
-    body: Identifiable & NodeBase
+    body: UpdateNodeBody
     token?: string
   }): Promise<Resource<Node>>
 

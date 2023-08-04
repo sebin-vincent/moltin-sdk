@@ -79,6 +79,8 @@ type ShopperCatalogProductsInclude =
 interface ShopperCatalogAdditionalHeaders {
   'EP-Context-Tag'?: string
   'EP-Channel'?: string
+  'X-MOLTIN-LANGUAGE'?: string
+  'X-MOLTIN-CURRENCY'?: string
 }
 
 interface ShopperCatalogProductsQueryableResource<
@@ -114,6 +116,17 @@ export interface ShopperCatalogProductsEndpoint
     token?: string
     additionalHeaders?: ShopperCatalogAdditionalHeaders
   }): Promise<ShopperCatalogResourcePage<ProductResponse>>
+
+  Configure(options: {
+    token?: string
+    additionalHeaders?: ShopperCatalogAdditionalHeaders
+    productId: string
+    selectedOptions: {
+      [key: string]: {
+        [key: string]: number
+      }
+    }
+  }): Promise<ShopperCatalogResource<ProductResponse>>
 
   Get(options: {
     productId: string

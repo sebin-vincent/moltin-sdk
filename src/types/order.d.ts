@@ -9,12 +9,28 @@ import {
   ResourcePage,
   QueryableResource,
   Resource,
+  ResourceList,
   RelationshipToMany,
+  ResourceIncluded,
   Subset
 } from './core'
 import { FormattedPrice, Price } from './price'
 import { ProductComponents } from './pcm'
 import { XOR } from './util'
+
+export interface OrderIncluded {
+    items?: OrderItem[]
+    custom_discounts?: CustomDiscount[]
+}
+
+export interface ShippingIncluded {
+  items?: OrderItem[]
+}
+
+export interface OrderResponse {
+  data: Order
+  included?: OrderIncluded
+}
 
 export interface OrderAddressBase {
   first_name: string
@@ -69,6 +85,7 @@ export interface Order extends Identifiable, OrderBase {
       without_tax: FormattedPrice
       tax: FormattedPrice
       discount: FormattedPrice
+      shipping: FormattedPrice
     }
     timestamps: {
       created_at: string
@@ -80,8 +97,55 @@ export interface Order extends Identifiable, OrderBase {
     customer?: Relationship<'customer'>
     account?: Relationship<'account'>
     account_member?: Relationship<'account_member'>
+    custom_discounts?: RelationshipToMany<'custom_discounts'>
   }
 }
+
+export interface ShippingGroupBase extends Identifiable {
+  type: string
+  relation: 'order'
+  order_id?: string
+  cart_id?: string
+  shipping_type?: string
+  tracking_reference?: string
+  address?: OrderShippingAddress
+  payment_status?: string
+  shipping_status?: string
+  delivery_estimate: {
+    start: string
+    end: string
+  }
+  created_at: string
+  updated_at: string
+  relationships: {
+    cart: {
+      data: {
+        type: 'cart'
+        id: string
+      }
+    }
+  }
+  meta: {
+    shipping_display_price: {
+      total: FormattedPrice
+      base: FormattedPrice
+      tax: FormattedPrice
+      fees: FormattedPrice
+    }
+    total_display_price: {
+      with_tax: FormattedPrice
+      without_tax: FormattedPrice
+      tax: FormattedPrice
+      discount: FormattedPrice
+      balance_owing: FormattedPrice
+      paid: FormattedPrice
+      authorized: FormattedPrice
+      without_discount: FormattedPrice
+      shipping: FormattedPrice
+    }
+  }
+}
+
 
 /**
  * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/orders-and-customers/orders/filtering.html
@@ -149,6 +213,16 @@ export interface OrderItemBase {
   value: Price
 }
 
+export interface CustomDiscount {
+  amount: FormattedPrice
+  type: string
+  id: string
+  external_id: string
+  discount_engine: string
+  description: string
+  discount_code: string
+}
+
 export interface OrderItem extends Identifiable, OrderItemBase {
   links: any
   meta?: {
@@ -183,6 +257,8 @@ export interface OrderItem extends Identifiable, OrderItemBase {
   relationships?: {
     cart_item: Relationship<'cart_item'>
     taxes: Relationship<'taxes'>[]
+    shipping_group: Relationship<'shipping_group'>
+    custom_discounts?: RelationshipToMany<'custom_discounts'>
   }
   discounts?: [
     {
@@ -196,7 +272,16 @@ export interface OrderItem extends Identifiable, OrderItemBase {
     }
   ]
   components?: ProductComponents
+  bundle_configuration?: {
+    selected_options: {
+      [key: string]: {
+        [key: string]: number
+      }
+    }
+  }
   catalog_source?: 'pim'
+  custom_inputs?: Record<string, any>
+  shipping_group_id?: string
 }
 
 export type PurchasePaymentMethod = 'purchase'
@@ -425,6 +510,7 @@ export type OrderInclude =
   | 'items'
   | 'account'
   | 'account_member'
+  | 'custom_discounts'
 
 /**
  * Orders Endpoints
@@ -434,7 +520,7 @@ export type OrderInclude =
  * Update DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/orders-and-customers/orders/update-an-order.html
  */
 export interface OrdersEndpoint
-  extends QueryableResource<Order, OrderFilter, OrderSort, OrderInclude> {
+  extends QueryableResource<Order, OrderFilter, OrderSort, OrderInclude>{
   endpoint: 'orders'
 
   /**
@@ -481,4 +567,13 @@ export interface OrdersEndpoint
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api
    */
   anonymize(ids: AnonymizeOrder): Promise<AnonymizeOrderResponse>
+
+  With(included: OrderInclude | OrderInclude[]): OrdersEndpoint
+
+  Get(id: string, token?: string): Promise<ResourceIncluded<Order, OrderIncluded>>
+
+  AllShippingGroups(id:string): Promise<ResourceList<ShippingGroupBase>>
+
+  GetShippingGroup(id:string, ShippingGroupId: string): Promise<ResourceIncluded<ShippingGroupBase, ShippingIncluded>>
+
 }

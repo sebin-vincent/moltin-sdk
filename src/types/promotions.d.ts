@@ -14,14 +14,47 @@ import {
   ResourcePage
 } from './core'
 
+//interfaces for target_conditions
+export interface Conditions {
+  or: AndCondition[]
+}
+
+export interface AndCondition {
+  and: TargetCondition[]
+}
+
+export interface TargetCondition {
+  attribute?: PromotionAttributeValues
+  node?: { values: Array<string> }
+}
+
+export interface PromotionAttributeValues {
+  template: string
+  field: string
+  type: 'string' | 'boolean' | 'integer' | 'float' | 'date'
+  values: Array<string | boolean | number>
+}
+
+export interface Exclude {
+  targets?: string[]
+  nodes?: string[]
+  attributes?: PromotionAttribute[]
+  conditions?: Conditions
+}
+
+export interface PromotionAttribute {
+  template: string
+  field: string
+  type: 'string' | 'boolean' | 'integer' | 'float' | 'date'
+  value: string | boolean | number
+}
+
 /**
  * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/carts-and-checkout/promotions/index.html#fixed-discount
  */
 export interface FixedDiscountSchema {
   currencies: CurrencyAmount[]
-  exclude?: {
-    targets: string[]
-  }
+  exclude?: Exclude
 }
 
 /**
@@ -29,9 +62,7 @@ export interface FixedDiscountSchema {
  */
 export interface PercentDiscountSchema {
   currencies: CurrencyPercentage[]
-  exclude?: {
-    targets: string[]
-  }
+  exclude?: Exclude
 }
 
 /**
@@ -41,6 +72,8 @@ export interface XforYSchema {
   x: number
   y: number
   targets: string[]
+  target_conditions?: Conditions
+  exclude?: Exclude
 }
 
 /**
@@ -49,6 +82,8 @@ export interface XforYSchema {
 export interface XforAmountSchema {
   x: number
   targets: CurrencyAmount[]
+  target_conditions?: Conditions
+  exclude?: Exclude
 }
 
 /**
@@ -75,6 +110,8 @@ export interface BundleGiftSchema {
 export interface ItemFixedDiscountSchema {
   targets: string[]
   currencies: CurrencyAmount[]
+  target_conditions?: Conditions
+  exclude?: Exclude
 }
 
 /**
@@ -83,6 +120,9 @@ export interface ItemFixedDiscountSchema {
 export interface ItemPercentDiscountSchema {
   targets: string[] | 'all'
   percent: number
+  target_conditions?: Conditions
+  target_attributes?: PromotionAttribute[]
+  exclude?: Exclude
 }
 
 export interface CurrencyAmount {
@@ -149,6 +189,10 @@ export interface PromotionCode {
   code: string
   uses?: number
   user?: string
+  created_by ?: string
+  max_uses ?: number
+  meta ?: PromotionMeta
+  consume_unit?: 'per_cart' | 'per_item'
 }
 
 export interface DeletePromotionCodesBodyItem extends ResourceList<any> {
@@ -203,6 +247,5 @@ export interface PromotionsEndpoint
     codes: DeletePromotionCodesBodyItem[]
   ): Promise<{}>
 
-  History(promotionId:string): Promise<ResourcePage<Promotion>>
+  History(promotionId: string): Promise<ResourcePage<Promotion>>
 }
-

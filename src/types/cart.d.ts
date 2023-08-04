@@ -4,10 +4,16 @@
  * for Checkout, you can use the Checkout endpoint to convert the cart to an order.
  * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/carts-and-orders/carts/index.html
  */
-import { Resource, QueryableResource } from './core'
+import {
+  Resource,
+  QueryableResource,
+  ResourceIncluded,
+  Identifiable
+} from './core'
 import { Address } from './address'
 import { Price, FormattedPrice } from './price'
 import { Order } from './order'
+import { PcmProductResponse } from './pcm'
 
 export interface CheckoutCustomer {
   id: string
@@ -35,7 +41,7 @@ export interface ItemTaxObject {
   rate: number
 }
 
-export interface ItemTaxObjectResponse extends ItemTaxObject{
+export interface ItemTaxObjectResponse extends ItemTaxObject {
   id: string
 }
 
@@ -59,6 +65,9 @@ export interface Cart {
       updated_at: string
       expires_at: string
     }
+  }
+  discount_settings: {
+    custom_discounts_enabled: boolean
   }
 }
 
@@ -85,6 +94,7 @@ export interface CartItem extends CartItemBase {
   manage_stock: boolean
   unit_price: Price
   value: Price
+  shipping_group_id?: string
   links: {
     product: string
   }
@@ -133,16 +143,23 @@ export interface CartItemsResponse {
       updated_at: string
       expires_at: string
     }
-  },
+  }
   included?: {
     tax_items?: ItemTaxObjectResponse[]
   }
 }
 
 export interface BulkAddOptions {
-   add_all_or_nothing: boolean 
+  add_all_or_nothing: boolean
 }
 
+export interface BulkCustomDiscountOptions {
+  add_all_or_nothing: boolean
+}
+
+export interface MergeCartOptions {
+  add_all_or_nothing: boolean
+}
 export interface CartItemObject {
   type: string
   name?: string
@@ -154,24 +171,115 @@ export interface CartItemObject {
   code?: string
 }
 
-export type CartInclude =
-    | 'items'
-    | 'tax_items'
-
-interface CartQueryableResource <
-    R,
-    F,
-    S,
-    > extends QueryableResource<Cart, F, S, CartInclude> {
-  With(includes: CartInclude | CartInclude[]): CartEndpoint
+export interface CartTaxItemObject {
+  type: string
+  name: string
+  jurisdiction: string
+  code: string
+  rate: number
+  relationships: {
+    item: {
+      data: {
+        type: string
+        id: string
+      }
+    }
+  }
 }
 
-export interface ResourceIncluded<R, I = never> extends Resource<R> {
-  included?: I
+export type CartInclude = 'items' | 'tax_items'
+
+interface CartQueryableResource<R, F, S>
+  extends QueryableResource<Cart, F, S, CartInclude> {
+  With(includes: CartInclude | CartInclude[]): CartEndpoint
 }
 
 export interface CartIncluded {
   items: CartItem[]
+}
+
+export interface CartAdditionalHeaders {
+  'EP-Context-Tag'?: string
+  'EP-Channel'?: string
+  'X-MOLTIN-CURRENCY'?: string
+}
+
+export interface CartShippingGroupBase {
+  type: string
+  include_tax: boolean
+  shipping_type: string
+  tracking_reference?: string
+  address: Address
+  delivery_estimate: {
+    start: string
+    end: string
+  }
+}
+
+export interface ShippingGroupResponse {
+  type: string
+  relation: string
+  order_id?: string
+  cart_id?: string
+  shipping_type?: string
+  tracking_reference?: string
+  address?: Partial<Address>
+  payment_status?: string
+  shipping_status?: string
+  delivery_estimate: {
+    start: string
+    end: string
+  }
+  created_at: string
+  updated_at: string
+  relationships: {
+    cart: {
+      data: {
+        type: string
+        id: string
+      }
+    }
+  }
+  meta: {
+    display_price: {
+      tota: {
+        amount: number
+        currency: string
+        formatted: string
+      }
+      base: {
+        amount: number
+        currency: string
+        formatted: string
+      }
+      tax: {
+        amount: number
+        currency: string
+        formatted: string
+      }
+      fees: {
+        amount: number
+        currency: string
+        formatted: string
+      }
+    }
+  }
+}
+
+/**
+ * DOCS: https://elasticpath.dev/docs/commerce-cloud/carts/custom-discounts/add-custom-discount-to-cart
+ */
+export interface CartCustomDiscount extends Identifiable {
+  type: 'custom_discount'
+  external_id: string
+  discount_engine: string
+  amount: FormattedPrice
+  description: string
+  discount_code: string
+}
+
+export interface CustomDiscountResponse {
+  data: CartCustomDiscount
 }
 
 export interface CartEndpoint
@@ -197,12 +305,16 @@ export interface CartEndpoint
    * @param productId the ID of the product you want to add to cart.
    * @param quantity the amount of products to add to cart
    * @param data
+   * @param isSku the default value is `false`, which adds products by product ID. To add products by SKU, set to `true`.
+   * @param token customer token
    */
   AddProduct(
     productId: string,
     quantity?: number,
     data?: any,
-    isSku?: boolean
+    isSku?: boolean,
+    token?: string,
+    additionalHeaders?: CartAdditionalHeaders
   ): Promise<CartItemsResponse>
 
   /**
@@ -212,6 +324,10 @@ export interface CartEndpoint
    * @param item An custom item you want to add to the cart
    */
   AddCustomItem(item: any): Promise<CartItemsResponse>
+
+  CreateShippingGroup(
+    ShippingGroup: CartShippingGroupBase
+  ): Promise<ShippingGroupResponse>
 
   /**
    * Add Promotion to Cart
@@ -252,7 +368,8 @@ export interface CartEndpoint
   AddProduct(
     productId: string,
     quantity?: number,
-    data?: any
+    data?: any,
+    additionalHeaders?: CartAdditionalHeaders
   ): Promise<CartItemsResponse>
 
   RemoveAllItems(): Promise<CartItemsResponse>
@@ -276,7 +393,8 @@ export interface CartEndpoint
   UpdateItem(
     itemId: string,
     quantity: number,
-    customData?: any
+    customData?: any,
+    additionalHeaders?: CartAdditionalHeaders
   ): Promise<CartItemsResponse>
 
   /**
@@ -314,9 +432,12 @@ export interface CartEndpoint
    * Description: When you enable the bulk add feature, a shopper can add an array of items to their cart in one action, rather than adding each item one at a time.
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/carts-and-orders/carts/bulk-add-to-cart.html
    * @param data Cart items or custom items
-   * @param options Optional config object for add to cart behaviour 
+   * @param options Optional config object for add to cart behaviour
    */
-  BulkAdd(data: CartItemObject[], options?: BulkAddOptions): Promise<CartItemsResponse>
+  BulkAdd(
+    data: CartItemObject[],
+    options?: BulkAddOptions
+  ): Promise<CartItemsResponse>
 
   /**
    * Get Carts List
@@ -421,6 +542,17 @@ export interface CartEndpoint
   ): Promise<Resource<ItemTaxObjectResponse>>
 
   /**
+   * Bulk Add Items tax to Cart
+   * Description: When you enable the bulk add feature, a shopper can add an array of items to their cart in one action, rather than adding each item one at a time.
+   * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/carts-and-orders/carts/bulk-add-to-cart.html
+   * @param data Cart items or custom items
+   * @param options Optional config object for add to cart behaviour
+   */
+  BulkAddItemTax(
+    data: CartTaxItemObject[],
+    options?: BulkAddOptions
+  ): Promise<CartTaxItemObject[]>
+  /**
    * Update a Tax Item
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/carts-and-orders/carts/cart-items/tax-items/update-a-tax-item.html
    * @param itemId the unique identifier for this cart item.
@@ -454,13 +586,66 @@ export interface CartEndpoint
   Checkout(
     customer: string | CheckoutCustomer | CheckoutCustomerObject,
     billingAddress: Partial<Address>,
-    shippingAddress?: Partial<Address>
+    shippingAddress?: Partial<Address>,
+    additionalHeaders?: CartAdditionalHeaders
   ): Promise<Resource<Order>>
 
+  /**
+   * Merge
+   * Description: Allows to merge two carts. Moves the cart items from one cart to another.
+   * If both the cart items are same, the cart items quantity will be increased
+   * DOCS: https://elasticpath.dev/docs/carts/cart-items/merging-carts.html
+   * @param cartId the cart Id of the cart to be merged.
+   * @param token the customer token of the cart to whom it is associated or to be associated with
+   * @param options When true, if an error occurs for any item, no items are added to the cart. When false, valid items are added to the cart and the items with errors are reported in the response. Default is true
+   */
+
+  Merge(
+    cartId: string,
+    token?: string,
+    options?: MergeCartOptions
+  ): Promise<PcmProductResponse[]>
   /**
    * Delete a Cart
    * Description: You can easily remove all items from a cart.
    * DOCS: https://documentation.elasticpath.com/commerce-cloud/docs/api/carts-and-orders/carts/delete-a-cart.html
    */
   Delete(): Promise<{}>
+
+  /**
+   * Create a Cart Custom Discount
+   * DOCS: https://elasticpath.dev/docs/commerce-cloud/carts/custom-discounts/add-custom-discount-to-cart
+   * @param data the custom Discount object
+   */
+  AddCartCustomDiscount(
+    data: CartCustomDiscount
+  ): Promise<Resource<CustomDiscountResponse>>
+
+  UpdateCartCustomDiscount(
+    customDiscountId: string,
+    body: CartCustomDiscount
+  ): Promise<Resource<CustomDiscountResponse>>
+
+  RemoveCartCustomDiscount(customDiscountId: string): Promise<{}>
+
+  AddItemCustomDiscount(
+    itemId: string,
+    data: CartCustomDiscount
+  ): Promise<Resource<CustomDiscountResponse>>
+
+  UpdateItemCustomDiscount(
+    itemId: string,
+    customDiscountId: string,
+    body: CartCustomDiscount
+  ): Promise<Resource<CustomDiscountResponse>>
+
+  RemoveItemCustomDiscount(
+    itemId: string,
+    customDiscountId: string
+  ): Promise<{}>
+
+  BulkAddCartCustomDiscount(
+    data: CartCustomDiscount[],
+    options?: BulkCustomDiscountOptions
+  ): Promise<CustomDiscountResponse[]>
 }
